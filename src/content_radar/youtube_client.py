@@ -74,6 +74,61 @@ class YouTubeClient:
             items.extend(response.get("items", []))
         return items
 
+    def get_channel_details(self, channel_ids: list[str]) -> list[dict]:
+        """Alias for :meth:`get_channel_stats`.
+
+        Returns ``snippet`` (including ``publishedAt``, the channel's
+        creation date) plus ``statistics`` (subscriberCount, viewCount,
+        videoCount) for each channel id. Kept as a separate name since
+        callers reasoning about "channel details" (age + stats) may find
+        it clearer than "stats" alone; both fetch the same ``part``.
+        """
+        return self.get_channel_stats(channel_ids)
+
+    def list_trending_videos(
+        self,
+        region_code: str = "US",
+        category_id: str | list[str] | None = None,
+        max_results: int = 50,
+    ) -> list[dict]:
+        """Fetch currently trending ("mostPopular") videos.
+
+        ``category_id`` may be ``None`` (no category filter, single call),
+        a single category id string, or a list of category ids to loop
+        over (results from each category call are concatenated and
+        de-duplicated by video id). ``max_results`` is applied per
+        category/call and capped at 50 per the API's own limit.
+        """
+        max_results = min(max_results, 50)
+
+        if category_id is None:
+            category_ids: list[str | None] = [None]
+        elif isinstance(category_id, str):
+            category_ids = [category_id]
+        else:
+            category_ids = list(category_id)
+
+        items: list[dict] = []
+        seen_ids: set[str] = set()
+        for cat in category_ids:
+            request_kwargs = {
+                "part": "snippet,statistics",
+                "chart": "mostPopular",
+                "regionCode": region_code,
+                "maxResults": max_results,
+            }
+            if cat:
+                request_kwargs["videoCategoryId"] = cat
+            request = self._service.videos().list(**request_kwargs)
+            response = request.execute()
+            for item in response.get("items", []):
+                video_id = item.get("id")
+                if video_id in seen_ids:
+                    continue
+                seen_ids.add(video_id)
+                items.append(item)
+        return items
+
     def get_comments(self, video_id: str, max_results: int = 50) -> list[dict]:
         """Fetch top-level comment threads for a video."""
         request = self._service.commentThreads().list(

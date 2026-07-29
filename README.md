@@ -6,9 +6,29 @@ finding rising niches, monitoring your own channels, and scouting sponsors.
 ## Modules
 
 ### 1. Niche trend radar (`niche_radar.py`)
-Searches YouTube for recent videos matching your seed keywords, pulls their
-stats, and ranks them by a "heat score" (views per day since publication).
-Results are stored in SQLite as a niche snapshot.
+Default mode requires **no manual keywords**: it auto-discovers currently
+trending "breakout" channels. It pulls YouTube's currently-trending videos,
+dedupes their channels, and flags channels that are both relatively new and
+whose lifetime view count is dramatically higher than their subscriber count
+(`view_to_sub_ratio = view_count / subscriber_count`) — a strong signal that a
+niche is suddenly taking off. Results are ranked by that ratio and stored in
+SQLite (`breakout_channels` table) under a new niche row
+(`auto-discovery:<region>:<date>`).
+
+CLI flags for discovery mode (all optional):
+- `--region` (default `US`) — YouTube region code for trending videos.
+- `--max-age-days` (default `365`) — max channel age to qualify as "new".
+- `--min-ratio` (default `5.0`) — minimum view-to-subscriber ratio to qualify
+  as a breakout.
+- `--discover` / `--no-discover` — force discovery mode on/off explicitly.
+  Discovery runs automatically whenever `--keywords` is omitted.
+
+A secondary, targeted **keyword-search mode** still exists for when you want
+to look at a specific topic instead of auto-discovery: pass `--keywords
+"ai coding,productivity"` (with optional `--days`, default 7) to search
+recent YouTube videos matching your seed keywords, pull their stats, and rank
+them by a "heat score" (views per day since publication). Results are stored
+as a niche snapshot (`niche_snapshots` table), same as before.
 
 **YouTube-only.** TikTok's and Instagram's official public APIs do not expose
 discovery data for arbitrary third-party content, so trend discovery across
@@ -53,7 +73,10 @@ uv run content-radar init-db
 ## Usage
 
 ```bash
-# Module 1: find rising niches
+# Module 1: auto-discover breakout niches/channels (default mode, no keywords needed)
+uv run content-radar niches --discover --region US
+
+# Module 1 (targeted mode): find rising videos for specific seed keywords
 uv run content-radar niches --keywords "ai coding,productivity" --days 7
 
 # Module 2: monitor your own YouTube channel

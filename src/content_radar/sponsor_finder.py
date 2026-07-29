@@ -102,7 +102,13 @@ def scan_niche_for_sponsors(
     db_path=None,
     brand_seed_list: list[str] | None = None,
 ) -> list[tuple[str, int, SponsorMention]]:
-    """Scan all stored niche_snapshots for a niche and aggregate sponsor candidates."""
+    """Scan all stored video titles for a niche and aggregate sponsor candidates.
+
+    Supports both niche kinds: keyword-search snapshots (``niche_snapshots``)
+    and auto-discovery breakout-channel runs (``breakout_channels``), so
+    `content-radar sponsors --niche-id <id>` works against either a
+    `niches --keywords ...` run or a `niches --discover` run.
+    """
     brand_seed_list = brand_seed_list if brand_seed_list is not None else load_brand_seed_list()
     conn = get_connection(db_path) if db_path else get_connection()
     try:
@@ -111,8 +117,18 @@ def scan_niche_for_sponsors(
             (niche_id,),
         ).fetchall()
 
+        breakout_rows = conn.execute(
+            """
+            SELECT example_video_id AS video_id, example_video_title AS title
+            FROM breakout_channels WHERE niche_id = ?
+            """,
+            (niche_id,),
+        ).fetchall()
+
         all_mentions: list[SponsorMention] = []
-        for row in rows:
+        for row in list(rows) + list(breakout_rows):
+            if not row["video_id"]:
+                continue
             all_mentions.extend(
                 find_brand_mentions(row["title"], row["video_id"], brand_seed_list)
             )

@@ -60,6 +60,21 @@ CREATE TABLE IF NOT EXISTS video_comments (
     sentiment REAL
 );
 
+CREATE TABLE IF NOT EXISTS breakout_channels (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    niche_id INTEGER NOT NULL REFERENCES niches(id),
+    channel_id TEXT NOT NULL,
+    channel_title TEXT NOT NULL,
+    channel_age_days REAL NOT NULL,
+    subscriber_count INTEGER NOT NULL DEFAULT 0,
+    view_count INTEGER NOT NULL DEFAULT 0,
+    view_to_sub_ratio REAL NOT NULL,
+    example_video_id TEXT,
+    example_video_title TEXT,
+    category_id TEXT,
+    detected_at TEXT NOT NULL
+);
+
 CREATE TABLE IF NOT EXISTS sponsor_candidates (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     niche_id INTEGER NOT NULL REFERENCES niches(id),
